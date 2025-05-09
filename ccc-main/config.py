@@ -1,10 +1,12 @@
+import os
+
 # Database connection configuration
 DB_CONFIG = {
-    'host': '127.0.0.1',
-    'user': 'admin_user',  # Change as needed
-    'password': 'admin123',  # Change as needed
-    'database': 'CinemaDBcc',
-    'port': 3306
+    'host': os.environ.get('DB_HOST', '127.0.0.1'),
+    'user': os.environ.get('DB_USER', 'admin_user'),
+    'password': os.environ.get('DB_PASSWORD', 'admin123'),
+    'database': os.environ.get('DB_NAME', 'CinemaDBcc'),
+    'port': int(os.environ.get('DB_PORT', 3306))
 }
 
 # Application settings

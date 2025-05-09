@@ -436,9 +436,7 @@ CREATE TABLE Users (
 INSERT INTO Users (Username, PasswordHash, Role)
 VALUES
     ('admin_user', SHA2('admin123', 256), 'Admin'),
-    ('clerk_user', SHA2('clerk123', 256), 'TicketClerk'),
-    ('guest_user', SHA2('guest123', 256), 'Guest');
-
+    ('clerk_user', SHA2('clerk123', 256), 'TicketClerk')
 
 -- Creating MySQL users for role-based access control
 CREATE USER 'admin_user'@'localhost' IDENTIFIED BY 'admin123';
