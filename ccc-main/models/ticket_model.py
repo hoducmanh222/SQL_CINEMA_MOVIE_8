@@ -175,3 +175,15 @@ class TicketModel:
         except Exception as e:
             print(f"Error getting audit log: {e}")
             return []
+
+    def get_screening_info(self, screening_id):
+        """
+        Returns screening date and time for the given screening_id.
+        """
+        query = """
+            SELECT ScreeningDate, ScreeningTime
+            FROM Screenings
+            WHERE ScreeningID = %s
+        """
+        result = self.db.execute_query(query, (screening_id,))
+        return result[0] if result else None

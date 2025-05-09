@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.feedback_model import FeedbackModel
 from models.movie_model import MovieModel
 from models.customer_model import CustomerModel
+from models.screening_model import ScreeningModel
 
 class FeedbackManagementFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -17,6 +18,7 @@ class FeedbackManagementFrame(tk.Frame):
         self.feedback_model = FeedbackModel()
         self.movie_model = MovieModel()
         self.customer_model = CustomerModel()
+        self.screening_model = ScreeningModel()
         
         # Create UI elements
         self.create_widgets()
@@ -259,6 +261,11 @@ class FeedbackManagementFrame(tk.Frame):
             
         customer_id = self.customers_data[customer_name]
         movie_id = self.movies_data[movie_title]
+        
+        # Check if customer is eligible to give feedback
+        if not self.screening_model.has_customer_watched_movie(customer_id, movie_id):
+            messagebox.showerror("Feedback Not Allowed", "Customer can only give feedback for movies they have watched (with a valid, non-cancelled ticket for a past screening).")
+            return
         
         # Save or update feedback
         if self.current_id:

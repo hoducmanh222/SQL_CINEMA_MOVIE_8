@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sys
 import os
+import datetime
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,21 +45,11 @@ class TicketHistoryFrame(tk.Frame):
         apply_button.grid(row=0, column=2, padx=5, pady=5)
         
         # Tickets List
-        self.ticket_tree = ttk.Treeview(self, columns=("ID", "Movie", "Date", "Time", "Seat", "Status"), 
-                                      show="headings", height=15)
-        self.ticket_tree.heading("ID", text="Ticket ID")
-        self.ticket_tree.heading("Movie", text="Movie")
-        self.ticket_tree.heading("Date", text="Date")
-        self.ticket_tree.heading("Time", text="Time")
-        self.ticket_tree.heading("Seat", text="Seat")
-        self.ticket_tree.heading("Status", text="Status")
-        
-        self.ticket_tree.column("ID", width=70, anchor="center")
-        self.ticket_tree.column("Movie", width=200)
-        self.ticket_tree.column("Date", width=100, anchor="center")
-        self.ticket_tree.column("Time", width=100, anchor="center")
-        self.ticket_tree.column("Seat", width=70, anchor="center")
-        self.ticket_tree.column("Status", width=100, anchor="center")
+        columns = ("TicketID", "CustomerID", "CustomerName", "ScreeningID", "MovieTitle", "SeatNumber", "TimeWatched", "Status", "BookingDate")
+        self.ticket_tree = ttk.Treeview(self, columns=columns, show="headings", height=15)
+        for col in columns:
+            self.ticket_tree.heading(col, text=col)
+            self.ticket_tree.column(col, anchor="center")
         
         self.ticket_tree.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
         
@@ -123,20 +114,55 @@ class TicketHistoryFrame(tk.Frame):
         status_filter = self.status_var.get()
         
         # Fetch tickets
-        tickets = self.ticket_model.get_user_tickets(status_filter)
+        query = """
+            SELECT 
+                t.TicketID,
+                t.CustomerID,
+                c.CustomerName,
+                t.ScreeningID,
+                m.MovieTitle,
+                t.SeatNumber,
+                CONCAT(s.ScreeningDate, ' ', s.ScreeningTime) AS TimeWatched,
+                'Active' AS Status,
+                t.TicketID AS BookingDate -- replace with actual booking date column if exists
+            FROM Tickets t
+            JOIN Customers c ON t.CustomerID = c.CustomerID
+            JOIN Screenings s ON t.ScreeningID = s.ScreeningID
+            JOIN Movies m ON s.MovieID = m.MovieID
+            UNION ALL
+            SELECT 
+                ct.TicketID,
+                ct.CustomerID,
+                c.CustomerName,
+                ct.ScreeningID,
+                m.MovieTitle,
+                ct.SeatNumber,
+                CONCAT(s.ScreeningDate, ' ', s.ScreeningTime) AS TimeWatched,
+                'Cancelled' AS Status,
+                ct.CancellationDate AS BookingDate
+            FROM CancelledTickets ct
+            JOIN Customers c ON ct.CustomerID = c.CustomerID
+            JOIN Screenings s ON ct.ScreeningID = s.ScreeningID
+            JOIN Movies m ON s.MovieID = m.MovieID
+            -- add WHERE/ORDER BY as needed
+        """
+        tickets = self.ticket_model.db.execute_query(query)
         
         # Populate treeview
         if tickets:
             for ticket in tickets:
                 ticket_id = ticket["TicketID"]
+                customer_id = ticket["CustomerID"]
+                customer_name = ticket["CustomerName"]
+                screening_id = ticket["ScreeningID"]
                 movie_title = ticket["MovieTitle"]
-                date = ticket["ScreeningDate"]
-                time = ticket["ScreeningTime"]
-                seat = ticket["SeatNumber"]
-                status = ticket["Status"]  # This now comes directly from the query
+                seat_number = ticket["SeatNumber"]
+                time_watched = ticket["TimeWatched"]
+                status = ticket["Status"]
+                booking_date = ticket["BookingDate"]
                 
                 self.ticket_tree.insert("", "end", values=(
-                    ticket_id, movie_title, date, time, seat, status
+                    ticket_id, customer_id, customer_name, screening_id, movie_title, seat_number, time_watched, status, booking_date
                 ))
         
         # Load audit log data
@@ -159,7 +185,7 @@ class TicketHistoryFrame(tk.Frame):
                     log["OperationType"],
                     log["AffectedScreeningID"],
                     log["AffectedSeat"],
-                    log["UserID"],  # Should show the username properly now
+                    log["UserID"],
                     log["Timestamp"]
                 ))
         
@@ -169,7 +195,7 @@ class TicketHistoryFrame(tk.Frame):
             return
         
         # Get the selected ticket status
-        status = self.ticket_tree.item(selected_items[0])["values"][5]
+        status = self.ticket_tree.item(selected_items[0])["values"][7]
         
         # Disable cancel button if ticket is already cancelled
         if status == "Cancelled":
@@ -184,7 +210,29 @@ class TicketHistoryFrame(tk.Frame):
             return
             
         ticket_id = self.ticket_tree.item(selected_items[0])["values"][0]
-        status = self.ticket_tree.item(selected_items[0])["values"][5]
+        screening_id = self.ticket_tree.item(selected_items[0])["values"][3]
+        status = self.ticket_tree.item(selected_items[0])["values"][7]
+        
+        # Fetch screening date and time
+        screening_info = self.ticket_model.get_screening_info(screening_id)
+        screening_date = screening_info["ScreeningDate"]
+        screening_time = screening_info["ScreeningTime"]
+        
+        # Convert screening_time to datetime.time if it's a timedelta
+        if isinstance(screening_time, datetime.timedelta):
+            # Convert timedelta to seconds, then to hours/minutes/seconds
+            total_seconds = int(screening_time.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            screening_time = datetime.time(hour=hours, minute=minutes, second=seconds)
+        
+        # Combine date and time to a datetime object
+        screening_datetime = datetime.datetime.combine(screening_date, screening_time)
+        now = datetime.datetime.now()
+        if screening_datetime <= now:
+            messagebox.showerror("Cannot Cancel", "Cannot cancel a ticket for a screening that has already started or passed.")
+            return
         
         # Check if ticket is already cancelled
         if status == "Cancelled":
@@ -239,14 +287,17 @@ class TicketHistoryFrame(tk.Frame):
         if tickets:
             for ticket in tickets:
                 ticket_id = ticket["TicketID"]
+                customer_id = ticket["CustomerID"]
+                customer_name = ticket["CustomerName"]
+                screening_id = ticket["ScreeningID"]
                 movie_title = ticket["MovieTitle"]
-                date = ticket["ScreeningDate"]
-                time = ticket["ScreeningTime"]
-                seat = ticket["SeatNumber"]
+                seat_number = ticket["SeatNumber"]
+                time_watched = ticket.get("TimeWatched", "")
                 status = ticket.get("Status", "Active")
+                booking_date = ticket["BookingDate"]
                 
                 self.ticket_tree.insert("", "end", values=(
-                    ticket_id, movie_title, date, time, seat, status
+                    ticket_id, customer_id, customer_name, screening_id, movie_title, seat_number, time_watched, status, booking_date
                 ))
     
     def populate_audit_tree(self, logs):

@@ -90,3 +90,21 @@ class ScreeningModel:
         except Exception as e:
             print(f"Error getting screenings by date: {e}")
             return []
+
+    def has_customer_watched_movie(self, customer_id, movie_id):
+        """
+        Returns True if the customer has at least one non-cancelled ticket for any past screening of the given movie.
+        """
+        query = """
+            SELECT COUNT(*) AS cnt
+            FROM Tickets t
+            JOIN Screenings s ON t.ScreeningID = s.ScreeningID
+            WHERE t.CustomerID = %s
+              AND s.MovieID = %s
+              AND s.ScreeningDate < CURDATE()
+              AND t.TicketID NOT IN (
+                  SELECT TicketID FROM CancelledTickets
+              )
+        """
+        result = self.db.execute_query(query, (customer_id, movie_id))
+        return result[0]['cnt'] > 0 if result else False
