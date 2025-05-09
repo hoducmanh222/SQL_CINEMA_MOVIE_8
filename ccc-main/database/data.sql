@@ -431,29 +431,11 @@ CREATE TABLE Users (
     Role ENUM('Admin', 'TicketClerk', 'Guest') NOT NULL
 );
 
-
--- Inserting sample users
+-- Inserting demo users (passwords are hashed for demo purposes only)
 INSERT INTO Users (Username, PasswordHash, Role)
 VALUES
     ('admin_user', SHA2('admin123', 256), 'Admin'),
-    ('clerk_user', SHA2('clerk123', 256), 'TicketClerk')
-
--- Creating MySQL users for role-based access control
-CREATE USER 'admin_user'@'localhost' IDENTIFIED BY 'admin123';
-CREATE USER 'clerk_user'@'localhost' IDENTIFIED BY 'clerk123';
--- Granting permissions for Admin
-GRANT ALL PRIVILEGES ON CinemaDBcc.* TO 'admin_user'@'localhost';
-
-
--- Granting permissions for TicketClerk
-GRANT SELECT, INSERT, UPDATE ON CinemaDBcc.Tickets TO 'clerk_user'@'localhost';
-GRANT SELECT, INSERT, UPDATE ON CinemaDBcc.Customers TO 'clerk_user'@'localhost';
-GRANT SELECT ON CinemaDBcc.Screenings TO 'clerk_user'@'localhost';
-GRANT SELECT ON CinemaDBcc.Movies TO 'clerk_user'@'localhost';
-
-
--- Apply privilege changes
-FLUSH PRIVILEGES;
+    ('clerk_user', SHA2('clerk123', 256), 'TicketClerk');
 
 
 -- Creating SecurityAudit table for security logging

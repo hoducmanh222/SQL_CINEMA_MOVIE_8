@@ -110,3 +110,6 @@ cython_debug/
 
 # Environment variables
 .env
+
+# Database setup file
+database/setup_users.sql
