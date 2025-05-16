@@ -1,0 +1,33 @@
+e:\code\ccc-main\
+│
+├── config.py
+├── main.py
+├── .env.example
+├── .env         # (should NOT be committed, only local)
+├── .gitignore
+├── readme2.md
+│
+├── database\
+│   ├── data.sql
+│   ├── setup_users.sql   # (should NOT be committed, only local)
+│   └── backup_db.py
+│
+├── gui\
+│   ├── main_window.py
+│   ├── login_window.py
+│   ├── movie_management.py
+│   ├── cinema_room_management.py
+│   ├── screening_management.py
+│   ├── customer_management.py
+│   ├── ticket_booking.py
+│   ├── ticket_history.py
+│   ├── feedback_management.py
+│   └── reports.py
+│
+├── models\
+│   ├── ticket_model.py
+│   ├── report_model.py
+│   └── ... (other model files)
+│
+└── backups\
+    └── ... (database backup files)

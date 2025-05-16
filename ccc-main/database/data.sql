@@ -428,7 +428,7 @@ CREATE TABLE Users (
     UserID INT PRIMARY KEY AUTO_INCREMENT,
     Username VARCHAR(50) NOT NULL UNIQUE,
     PasswordHash VARCHAR(256) NOT NULL,
-    Role ENUM('Admin', 'TicketClerk', 'Guest') NOT NULL
+    Role ENUM('Admin', 'TicketClerk') NOT NULL
 );
 
 -- Inserting demo users (passwords are hashed for demo purposes only)
