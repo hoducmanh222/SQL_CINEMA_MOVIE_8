@@ -3,6 +3,8 @@ DROP DATABASE IF EXISTS CinemaDBcc;
 
 DROP USER IF EXISTS 'admin_user'@'localhost';
 DROP USER IF EXISTS 'clerk_user'@'localhost';
+DROP USER IF EXISTS 'guest_user'@'localhost';
+
 
 CREATE DATABASE CinemaDBcc;
 USE CinemaDBcc;
@@ -428,14 +430,42 @@ CREATE TABLE Users (
     UserID INT PRIMARY KEY AUTO_INCREMENT,
     Username VARCHAR(50) NOT NULL UNIQUE,
     PasswordHash VARCHAR(256) NOT NULL,
-    Role ENUM('Admin', 'TicketClerk') NOT NULL
+    Role ENUM('Admin', 'TicketClerk', 'Guest') NOT NULL
 );
 
--- Inserting demo users (passwords are hashed for demo purposes only)
+
+-- Inserting sample users
 INSERT INTO Users (Username, PasswordHash, Role)
 VALUES
     ('admin_user', SHA2('admin123', 256), 'Admin'),
-    ('clerk_user', SHA2('clerk123', 256), 'TicketClerk');
+    ('clerk_user', SHA2('clerk123', 256), 'TicketClerk'),
+    ('guest_user', SHA2('guest123', 256), 'Guest');
+
+
+-- Creating MySQL users for role-based access control
+CREATE USER 'admin_user'@'localhost' IDENTIFIED BY 'admin123';
+CREATE USER 'clerk_user'@'localhost' IDENTIFIED BY 'clerk123';
+CREATE USER 'guest_user'@'localhost' IDENTIFIED BY 'guest123';
+
+
+-- Granting permissions for Admin
+GRANT ALL PRIVILEGES ON CinemaDBcc.* TO 'admin_user'@'localhost';
+
+
+-- Granting permissions for TicketClerk
+GRANT SELECT, INSERT, UPDATE ON CinemaDBcc.Tickets TO 'clerk_user'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON CinemaDBcc.Customers TO 'clerk_user'@'localhost';
+GRANT SELECT ON CinemaDBcc.Screenings TO 'clerk_user'@'localhost';
+GRANT SELECT ON CinemaDBcc.Movies TO 'clerk_user'@'localhost';
+
+
+-- Granting permissions for Guest
+GRANT SELECT ON CinemaDBcc.Movies TO 'guest_user'@'localhost';
+GRANT SELECT ON CinemaDBcc.Screenings TO 'guest_user'@'localhost';
+
+
+-- Apply privilege changes
+FLUSH PRIVILEGES;
 
 
 -- Creating SecurityAudit table for security logging
@@ -445,7 +475,6 @@ CREATE TABLE SecurityAudit (
     Operation VARCHAR(100),
     Timestamp DATETIME
 );
-
 
 
 
